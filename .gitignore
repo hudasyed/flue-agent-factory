@@ -1,0 +1,9 @@
+node_modules/
+.spike-secrets/
+dist/
+.env
+*.local
+deploy/deployment.env
+deploy/release.env
+deploy/infra-ssh-config
+*.pem

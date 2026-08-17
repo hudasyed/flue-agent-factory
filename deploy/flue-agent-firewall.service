@@ -1,0 +1,14 @@
+[Unit]
+Description=Flue agent LAN firewall
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStartPre=-/usr/sbin/nft delete table inet flue_agent_firewall
+ExecStart=/usr/sbin/nft -f /etc/flue-agent/firewall.nft
+ExecReload=/bin/sh -c '/usr/sbin/nft delete table inet flue_agent_firewall 2>/dev/null || true; /usr/sbin/nft -f /etc/flue-agent/firewall.nft'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

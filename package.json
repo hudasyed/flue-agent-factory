@@ -1,0 +1,39 @@
+{
+  "name": "flue-agent-factory",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "start": "node dist/server.mjs",
+    "check": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "login": "tsx src/login.ts",
+    "spike": "flue run src/agents/spike-agent.ts --new --json --message \"Reply with exactly: FLUE_CODEX_BRIDGE_OK\"",
+    "spike:luna": "SPIKE_MODEL=openai-codex/gpt-5.6-luna SPIKE_THINKING=xhigh flue run src/agents/spike-agent.ts --new --json --message \"Reply with exactly: FLUE_LUNA_XHIGH_OK\""
+  },
+  "dependencies": {
+    "@earendil-works/pi-ai": "0.83.0",
+    "@flue/postgres": "2.0.3",
+    "@flue/runtime": "2.0.3",
+    "@flue/telegram": "2.0.3",
+    "@hono/node-server": "^2.0.3",
+    "grammy": "1.45.1",
+    "hono": "4.13.2",
+    "pg": "8.23.0",
+    "valibot": "1.4.2"
+  },
+  "devDependencies": {
+    "@flue/cli": "2.0.3",
+    "@flue/vite": "2.0.3",
+    "@types/node": "^22.10.10",
+    "@types/pg": "^8.15.5",
+    "tsx": "^4.20.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.0.14",
+    "vitest": "^4.1.0"
+  },
+  "overrides": {
+    "hono": "4.13.2"
+  }
+}

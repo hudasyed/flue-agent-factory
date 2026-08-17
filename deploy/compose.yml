@@ -1,0 +1,66 @@
+name: flue-agent-factory
+
+services:
+  workspace-image:
+    profiles: ["image"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.workspace
+      args:
+        RELEASE_ID: "${RELEASE_ID:-local}"
+    image: flue-agent-workspace:local
+
+  # Kept as a rollback-only compatibility service for the pre-hardening app.
+  # The current app never executes commands in this container.
+  workspace:
+    profiles: ["rollback"]
+    image: flue-agent-workspace:local
+    container_name: flue-workspace
+    restart: unless-stopped
+    volumes:
+      - /srv/flue-agent/tasks:/srv/flue-agent/tasks
+      - /srv/flue-agent/repositories:/srv/flue-agent/repositories
+
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        RELEASE_ID: "${RELEASE_ID:-local}"
+    image: flue-agent-factory:local
+    container_name: flue-agent-factory
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - /srv/flue-agent/secrets/deployment.env
+    environment:
+      PORT: "3210"
+      RELEASE_ID: "${RELEASE_ID:-local}"
+      # The deployment state file defaults this to disabled. The cutover
+      # helper changes it to polling only after all preflights pass.
+      TELEGRAM_MODE: "${TELEGRAM_MODE:-disabled}"
+      BWS_BINARY: /opt/bws
+      PI_AUTH_FILE: /srv/flue-agent/secrets/pi-auth.json
+      REPOSITORY_ROOT: /srv/flue-agent/repositories
+      TASK_WORKTREE_ROOT: /srv/flue-agent/tasks
+      FACTORY_STATE_ROOT: /srv/flue-agent/state
+      WORKSPACE_IMAGE: flue-agent-workspace:local
+      WORKSPACE_MEMORY_LIMIT: "${WORKSPACE_MEMORY_LIMIT:-4g}"
+      WORKSPACE_CPU_LIMIT: "${WORKSPACE_CPU_LIMIT:-4}"
+      WORKSPACE_PIDS_LIMIT: "${WORKSPACE_PIDS_LIMIT:-512}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - "${BWS_HOST_BINARY_PATH:?Set BWS_HOST_BINARY_PATH in deployment.env}:/opt/bws:ro"
+      - /srv/flue-agent/secrets:/srv/flue-agent/secrets
+      - /srv/flue-agent/tasks:/srv/flue-agent/tasks
+      - /srv/flue-agent/state:/srv/flue-agent/state
+      - /srv/flue-agent/repositories:/srv/flue-agent/repositories
+      - /srv/flue-agent/ssh:/root/.ssh:ro
+    healthcheck:
+      # Liveness remains backward-compatible so an automatic image rollback
+      # can run the prior app. Deployment activation separately checks /readyz.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3210/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s

@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.env
+.spike-secrets
+*.local
+deploy/*.env
+deploy/infra-ssh-config
+**/id_*
+**/*.pem
+npm-debug.log*
