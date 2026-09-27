@@ -82,7 +82,7 @@ async function handleMessage(message: Message, updateId: number): Promise<void> 
   if (body === '/new' || body.startsWith('/new ')) {
     const session = await createSession(chatId, body.slice('/new'.length).trim(), updateId);
     await ensureSessionWorkspace(session.id);
-    await sendTelegramText(chatId, `New session ${session.id.slice(0, 8)}: ${session.title}`);
+    await sendTelegramText(chatId, `Started a new conversation: ${session.title}`);
     return;
   }
   if (body === '/sessions') {
@@ -100,7 +100,7 @@ async function handleMessage(message: Message, updateId: number): Promise<void> 
   if (body.startsWith('/switch ')) {
     const session = await switchSession(chatId, body.slice('/switch '.length).trim());
     await sendTelegramText(chatId, session
-      ? `Active session: ${session.id.slice(0, 8)} — ${session.title}`
+      ? `Switched to: ${session.title}`
       : 'Session not found. Use /sessions to list available sessions.');
     return;
   }
@@ -130,7 +130,7 @@ async function handleMessage(message: Message, updateId: number): Promise<void> 
     }
     return;
   }
-  await telegram.sendMessage(chatId, `Working in ${session.id.slice(0, 8)}…`, {
+  await telegram.sendMessage(chatId, `Working on “${session.title}”…`, {
     reply_parameters: { message_id: message.message_id },
   });
   startWatchingTask(session, receipt.submissionId);
@@ -140,7 +140,7 @@ async function watchTask(session: FactorySession, submissionId: string): Promise
   if (watchedSubmissions.has(submissionId)) return;
   watchedSubmissions.add(submissionId);
   const warning = setTimeout(() => {
-    void sendTelegramText(session.chatId, `Still working in ${session.id.slice(0, 8)}; this task has been running for 10 minutes.`)
+    void sendTelegramText(session.chatId, `Still working on “${session.title}”; this task has been running for 10 minutes.`)
       .catch((error) => console.error('[telegram] failed to send task warning', error));
   }, 10 * 60 * 1000);
   warning.unref();
@@ -154,8 +154,8 @@ async function watchTask(session: FactorySession, submissionId: string): Promise
     const message = error instanceof Error ? error.message : String(error);
     const aborted = /aborted/i.test(message);
     notification = aborted
-      ? `Task ${submissionId.slice(-8)} was cancelled.`
-      : `Task ${submissionId.slice(-8)} is stuck or failed: ${message}`;
+      ? `The task in “${session.title}” was cancelled.`
+      : `The task in “${session.title}” is stuck or failed: ${message}`;
     await finishTask(submissionId, aborted ? 'aborted' : 'failed', message, notification);
   } finally {
     clearTimeout(warning);
@@ -210,7 +210,7 @@ async function handleCallback(chatId: string, data: string): Promise<void> {
   if (data.startsWith('session:')) {
     const session = await switchSession(chatId, data.slice('session:'.length));
     await sendTelegramText(chatId, session
-      ? `Active session: ${session.id.slice(0, 8)} — ${session.title}`
+      ? `Switched to: ${session.title}`
       : 'That session no longer exists.');
     return;
   }
@@ -231,7 +231,7 @@ async function sendSessionPicker(chatId: string): Promise<void> {
   await telegram.sendMessage(chatId, 'Choose a session:', {
     reply_markup: {
       inline_keyboard: sessions.map((session) => [{
-        text: `${session.id.slice(0, 8)} · ${session.title} · ${session.status}`.slice(0, 60),
+        text: `${session.title} · ${session.status}`.slice(0, 60),
         callback_data: `session:${session.id}`,
       }]),
     },
@@ -246,7 +246,7 @@ async function sendStatus(chatId: string): Promise<void> {
   }
   const task = await latestRunningTask(session.id);
   await sendTelegramText(chatId, [
-    `Session: ${session.id.slice(0, 8)} — ${session.title}`,
+    `Conversation: ${session.title}`,
     `Status: ${session.status}`,
     task ? `Running since: ${task.startedAt}` : 'No task is currently running.',
   ].join('\n'));
@@ -264,7 +264,7 @@ async function cancelActive(chatId: string): Promise<void> {
     return;
   }
   await init(Orchestrator, { id: session.agentInstanceId }).abort();
-  await sendTelegramText(chatId, `Cancellation requested for ${task.submissionId.slice(-8)}.`);
+  await sendTelegramText(chatId, `Cancellation requested for “${session.title}”.`);
 }
 
 function messageBody(message: Message): string {

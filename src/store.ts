@@ -183,8 +183,7 @@ function mapApproval(row: Record<string, unknown>): Approval {
 
 export async function createSession(chatId: string, title?: string, sourceUpdateId?: number): Promise<FactorySession> {
   const id = randomUUID();
-  const short = id.slice(0, 8);
-  const displayTitle = title?.trim() || `Session ${short}`;
+  const displayTitle = title?.trim() || 'Untitled conversation';
   const agentInstanceId = `telegram-owner-${chatId}-${id}`;
   const result = await pool.query(
     `INSERT INTO factory_sessions (id, chat_id, title, agent_instance_id, source_update_id, status)
